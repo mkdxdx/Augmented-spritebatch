@@ -46,6 +46,8 @@ end
 
 phase = 0
 local sin = math.sin
+-- sprites are going to change colors 
+-- and warp around to show main features of a helper class
 function love.update(dt)
 	phase = phase + dt
 	if phase >= 1 then
@@ -53,8 +55,16 @@ function love.update(dt)
 		for i=1,sprite_count-2 do
 			local r,g,b = math.random()*255,math.random()*255,math.random()*255
 			spritebatch:setSpriteColor(sprites[i],r,g,b,255)
+			
+			for j=1,4 do
+				local vind = (i-1)*4+j
+				local vx,vy,vu,vv,vr,vg,vb,va = spritebatch:getVertex(vind)
+				vx = vx + math.random()*10
+				vy = vy + math.random()*10
+				spritebatch:setVertex(vind,vx,vy,vu,vv,vr,vg,vb,va)
+			end
+			
 		end
-		
 		spritebatch:swapSpriteGeometry(sprite_count-1,sprite_count)
 	end
 	
