@@ -16,13 +16,8 @@ function VASpriteBatch:new(texture,buffer_size,hint)
 	local self = setmetatable({},VASpriteBatch)
 	self.sprite_added = false
 	self.sb = love.graphics.newSpriteBatch(texture,buffer_size,hint)
+	self.mesh = love.graphics.newMesh(4*self.sb:getBufferSize())
 	return self
-end
-
-function VASpriteBatch:init()
-	if self.use_mesh == true then
-		self.mesh = love.graphics.newMesh(4*self.sb:getBufferSize())
-	end
 end
 
 local sin,cos = math.sin,math.cos

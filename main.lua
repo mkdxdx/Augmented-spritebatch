@@ -1,11 +1,12 @@
 require("vaspritebatch")
 -- example usage of augmented spritebatch
-
+local sin,cos,pi = math.sin,math.cos,math.pi
 
 function love.load()
+	sprite_count = 14
 	texture = love.graphics.newImage("tex.png")
-	spritebatch = VASpriteBatch:new(texture,10,"dynamic")
-	spritebatch:init()
+	spritebatch = VASpriteBatch:new(texture,sprite_count,"dynamic")
+
 	
 	-- create some quads
 	quads = {	love.graphics.newQuad(0,0,64,64,texture:getWidth(),texture:getHeight()),
@@ -14,32 +15,33 @@ function love.load()
 				love.graphics.newQuad(64,64,64,64,texture:getWidth(),texture:getHeight())
 			}
 	
-	-- {quad number, x, y, r, sx, sy, ox, oy}
-	sprite_variables = {
-		{1, 64,64, 0, 2,2, 32,32},
-		{2, 128,128, 1.57/2, 2,2, 32,32},
-		{3, 256,256, 0, 3,3, 32,32},
-		{4, 284,284, 0, 1,1, 32,32},
-	}
+
 	
-	-- create some sprites from table above
+	-- lets create a circle of sprites floating around and changing colors
+	-- two sprites in the center are going to change themselves in draw order
+	centerx,centery = love.graphics:getWidth()/2,love.graphics.getHeight()/2
+	radius = 256
+	starting_angle = 0	
 	sprites = {}
-	for i,v in ipairs(sprite_variables) do
-		sprites[i] = spritebatch:add(quads[v[1]], v[2], v[3], v[4], v[5], v[6], v[7], v[8])
+	quad_index = 1
+	for i=1,sprite_count-2 do
+		local angle = (pi*2)*(i/(sprite_count-2))
+		local sx,sy = centerx+sin(angle)*radius,centery+cos(angle)*radius
+		sprites[i] = spritebatch:add(quads[quad_index],sx,sy,angle,1,1,32,32)
+		quad_index = quad_index + 1
+		if quad_index > #quads then quad_index = 1 end
 	end
 	
-	-- changing sprite color after they have been added to spritebatch, easy
-	spritebatch:setSpriteColor(1,255,0,0,255)
-	spritebatch:setSpriteColor(2,255,0,255,255)
-	spritebatch:setSpriteColor(3,255,255,255,128)
-	spritebatch:setSpriteColor(4,255,255,0,255)
+	sprites[#sprites+1] = spritebatch:add(quads[1],centerx-48,centery,0,3,3,32,32)
+	sprites[#sprites+1] = spritebatch:add(quads[4],centerx+48,centery,1.57/2,2,2,32,32)
+	
 end
 
 function love.draw()
+	-- draw the thing almost as vanilla spritebatch
+	love.graphics.print("Changing drawing order:",centerx-64,centery-128)
+	love.graphics.print("Changing existing sprite colors:")
 	love.graphics.draw(spritebatch:getSpriteBatch())
-	for i,v in ipairs(sprite_variables) do
-		love.graphics.circle("fill",v[2],v[3],1,4)
-	end
 end
 
 phase = 0
@@ -48,7 +50,12 @@ function love.update(dt)
 	phase = phase + dt
 	if phase >= 1 then
 		phase = 0
-		spritebatch:swapSpriteGeometry(1,2)
-		spritebatch:swapSpriteGeometry(3,4)
+		for i=1,sprite_count-2 do
+			local r,g,b = math.random()*255,math.random()*255,math.random()*255
+			spritebatch:setSpriteColor(sprites[i],r,g,b,255)
+		end
+		
+		spritebatch:swapSpriteGeometry(sprite_count-1,sprite_count)
 	end
+	
 end
