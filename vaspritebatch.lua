@@ -12,18 +12,35 @@ VASpriteBatch.use_lazy_autorefresh = true
 VASpriteBatch.ar_position = true
 VASpriteBatch.ar_texcoord = true
 VASpriteBatch.ar_color = true
+VASpriteBatch.use_recycle = true -- if recycle enabled
+-- spritebatch is going to attempt to use old and unused sprites instead of adding new ones
+-- and is going to track every usage of sprites
+-- to make this feature faster - user has to explicitly use function releaseSprite(id)
+-- so that spritebatch will mark unused sprites and then use them on next call of add()
+
+-- unused sprite is marked with each vertex having X/Y:0/0 and U/V:0/0
+-- i can use separate id table to track unused sprites
+-- or i can use custom vertex attributes to track unused vertices but that is a huge excess
 function VASpriteBatch:new(texture,buffer_size,hint)
 	local self = setmetatable({},VASpriteBatch)
 	self.sprite_added = false
 	self.sb = love.graphics.newSpriteBatch(texture,buffer_size,hint)
 	self.mesh = love.graphics.newMesh(4*self.sb:getBufferSize())
+	self.released_stack = {}
 	return self
 end
 
 local sin,cos = math.sin,math.cos
 
 function VASpriteBatch:add(quad, x, y, r, sx, sy, ox, oy, kx, ky)
-	local id = self.sb:add(quad, x, y, r, sx, sy, ox, oy, kx, ky)
+	local id 
+	if self.use_recycle == true and #self.released_stack>0 then
+		id = self.released_stack[#self.released_stack]
+		table.remove(self.released_stack,#self.released_stack)
+		self:set(id,quad,x,y,r,sx,sy,ox,oy,kx,ky)
+	else
+		id = self.sb:add(quad, x, y, r, sx, sy, ox, oy, kx, ky)
+	end
 	if self.use_mesh == true then
 		self.sprite_added = true
 		self:updateSpriteVertexData(true,id, quad, x, y, r, sx, sy, ox, oy, kx, ky)
@@ -37,6 +54,16 @@ function VASpriteBatch:set(id,quad,x,y,r,sx,sy,ox,oy,kx,ky)
 	if self.use_mesh == true then
 		self:updateSpriteVertexData(false, id, quad, x, y, r, sx, sy, ox, oy, kx, ky)
 	end
+end
+
+function VASpriteBatch:releaseSprite(id)
+	-- set all vertices XYUV 0/0/0/0
+	-- or change value in separate table of an id that it is released now
+	local vind = (id-1)*4
+	for i=1,4 do
+		self:setVertex(vind+i, 0,0, 0,0, 255,255,255,255)
+	end
+	self.released_stack[#self.released_stack+1] = id
 end
 
 -- the magic function
@@ -144,6 +171,19 @@ function VASpriteBatch:setSpriteColor(id,r,g,b,a)
 	end
 end
 
+-- this function returns spritebatch to draw in love.draw
+-- and to reduce attachAttributes call count to one before actual drawcall
+-- i use lazy autorefresh of each mesh attribute before that drawcall, 
+-- not after attribute has been modified
+function VASpriteBatch:getSpriteBatch() 
+	if self.use_lazy_autorefresh == true then
+		if self.ar_position == true then self:refreshAttributes("VertexPosition") end
+		if self.ar_texcoord == true then self:refreshAttributes("VertexTexCoord") end
+		if self.ar_color == true then self:refreshAttributes("VertexColor") end
+	end
+	return self.sb 
+end
+
 function VASpriteBatch:clear() self.sb:clear() end
 function VASpriteBatch:setTexture(t) self.sb:setTexture(t) end
 function VASpriteBatch:flush() self.sb:flush() end
@@ -158,16 +198,5 @@ function VASpriteBatch:getVertexData(index)	return self.vert_array[index] end
 function VASpriteBatch:getMesh() return self.mesh end
 function VASpriteBatch:getVertex(index) return self.mesh:getVertex(index) end
 function VASpriteBatch:setVertex(index,x,y,u,v,r,g,b,a)	self.mesh:setVertex(index,x,y,u,v,r,g,b,a) end
+function VASpriteBatch:getFreeSpriteCount() return #self.released_stack end
 
--- this function returns spritebatch to draw in love.draw
--- and to reduce attachAttributes call count to one before actual drawcall
--- i use lazy autorefresh of each mesh attribute before that drawcall, 
--- not after attribute has been modified
-function VASpriteBatch:getSpriteBatch() 
-	if self.use_lazy_autorefresh == true then
-		if self.ar_position == true then self:refreshAttributes("VertexPosition") end
-		if self.ar_texcoord == true then self:refreshAttributes("VertexTexCoord") end
-		if self.ar_color == true then self:refreshAttributes("VertexColor") end
-	end
-	return self.sb 
-end
