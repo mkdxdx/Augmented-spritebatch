@@ -31,12 +31,12 @@ function VASpriteBatch:new(texture,buffer_size,hint)
 end
 
 local sin,cos = math.sin,math.cos
-
+local rem = table.remove
 function VASpriteBatch:add(quad, x, y, r, sx, sy, ox, oy, kx, ky)
 	local id 
 	if self.use_recycle == true and #self.released_stack>0 then
 		id = self.released_stack[#self.released_stack]
-		table.remove(self.released_stack,#self.released_stack)
+		rem(self.released_stack,#self.released_stack)
 		self:set(id,quad,x,y,r,sx,sy,ox,oy,kx,ky)
 	else
 		id = self.sb:add(quad, x, y, r, sx, sy, ox, oy, kx, ky)
