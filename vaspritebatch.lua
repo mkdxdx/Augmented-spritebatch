@@ -56,9 +56,11 @@ function VASpriteBatch:set(id,quad,x,y,r,sx,sy,ox,oy,kx,ky)
 	end
 end
 
+-- this function will mark sprite id as released for later usage
+-- after at least one released sprite is present, next call of Add will use previously
+-- released id and return it on call
 function VASpriteBatch:releaseSprite(id)
 	-- set all vertices XYUV 0/0/0/0
-	-- or change value in separate table of an id that it is released now
 	local vind = (id-1)*4
 	for i=1,4 do
 		self:setVertex(vind+i, 0,0, 0,0, 255,255,255,255)
