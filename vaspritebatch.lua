@@ -8,7 +8,7 @@ VASpriteBatch = {}
 VASpriteBatch.__index = VASpriteBatch
 VASpriteBatch.ident = "c_vaspritebatch"
 VASpriteBatch.use_mesh = true
-VASpriteBatch.use_lazy_autorefresh = true
+VASpriteBatch.use_autorefresh = true
 VASpriteBatch.ar_position = true
 VASpriteBatch.ar_texcoord = true
 VASpriteBatch.ar_color = true
@@ -25,7 +25,7 @@ function VASpriteBatch:new(texture,buffer_size,hint)
 	local self = setmetatable({},VASpriteBatch)
 	self.sprite_added = false
 	self.sb = love.graphics.newSpriteBatch(texture,buffer_size,hint)
-	self.mesh = love.graphics.newMesh(4*self.sb:getBufferSize())
+	self.mesh = love.graphics.newMesh(4*self.sb:getBufferSize(),"fan",hint)
 	self.released_stack = {}
 	return self
 end
@@ -178,10 +178,8 @@ end
 -- i use lazy autorefresh of each mesh attribute before that drawcall, 
 -- not after attribute has been modified
 function VASpriteBatch:getSpriteBatch() 
-	if self.use_lazy_autorefresh == true then
-		if self.ar_position == true then self:refreshAttributes("VertexPosition") end
-		if self.ar_texcoord == true then self:refreshAttributes("VertexTexCoord") end
-		if self.ar_color == true then self:refreshAttributes("VertexColor") end
+	if self.use_autorefresh == true then
+		self:refreshAttributes()
 	end
 	return self.sb 
 end
@@ -193,12 +191,16 @@ function VASpriteBatch:getBufferSize() return self.sb:getBufferSize() end
 function VASpriteBatch:setBufferSize(bs) self.sb:setBufferSize(bs) end
 function VASpriteBatch:getTexture()	return self.sb:getTexture() end
 function VASpriteBatch:attachAttribute(name,mesh) self.sb:attachAttribute(name,mesh or self.mesh) end
-function VASpriteBatch:refreshAttributes(attr) self:attachAttribute(attr,self.mesh) end
+function VASpriteBatch:refreshAttributes() 
+	if self.ar_position == true then self:attachAttribute("VertexPosition") end
+	if self.ar_texcoord == true then self:attachAttribute("VertexTexCoord") end
+	if self.ar_color == true then self:attachAttribute("VertexColor") end
+end
 function VASpriteBatch:getCount() return self.sb:getCount() end
-function VASpriteBatch:setVertex(index,vdata) self.vert_array[index] = vdata end
-function VASpriteBatch:getVertexData(index)	return self.vert_array[index] end
 function VASpriteBatch:getMesh() return self.mesh end
 function VASpriteBatch:getVertex(index) return self.mesh:getVertex(index) end
 function VASpriteBatch:setVertex(index,x,y,u,v,r,g,b,a)	self.mesh:setVertex(index,x,y,u,v,r,g,b,a) end
 function VASpriteBatch:getFreeSpriteCount() return #self.released_stack end
-
+function VASpriteBatch:setColor(r,g,b,a) self.sb:setColor(r,g,b,a) end
+function VASpriteBatch:setMeshUsage(mu) self.use_mesh = mu end
+function VASpriteBatch:setAutorefresh(ar) self.use_autorefresh = ar end
