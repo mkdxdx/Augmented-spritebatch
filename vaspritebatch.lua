@@ -7,7 +7,6 @@
 VASpriteBatch = {}
 VASpriteBatch.__index = VASpriteBatch
 VASpriteBatch.ident = "c_vaspritebatch"
-VASpriteBatch.use_mesh = true
 VASpriteBatch.use_autorefresh = true
 VASpriteBatch.ar_position = true
 VASpriteBatch.ar_texcoord = true
@@ -21,11 +20,13 @@ VASpriteBatch.use_recycle = true -- if recycle enabled
 -- unused sprite is marked with each vertex having X/Y:0/0 and U/V:0/0
 -- i can use separate id table to track unused sprites
 -- or i can use custom vertex attributes to track unused vertices but that is a huge excess
-function VASpriteBatch:new(texture,buffer_size,hint)
+function VASpriteBatch:new(texture,buffer_size,hint,use_mesh)
 	local self = setmetatable({},VASpriteBatch)
-	self.sprite_added = false
 	self.sb = love.graphics.newSpriteBatch(texture,buffer_size,hint)
-	self.mesh = love.graphics.newMesh(4*self.sb:getBufferSize(),"fan",hint)
+	self.use_mesh = use_mesh
+	if use_mesh then
+		self.mesh = love.graphics.newMesh(4*self.sb:getBufferSize(),"fan",hint)
+	end
 	self.released_stack = {}
 	return self
 end
@@ -42,7 +43,6 @@ function VASpriteBatch:add(quad, x, y, r, sx, sy, ox, oy, kx, ky)
 		id = self.sb:add(quad, x, y, r, sx, sy, ox, oy, kx, ky)
 	end
 	if self.use_mesh == true then
-		self.sprite_added = true
 		self:updateSpriteVertexData(true,id, quad, x, y, r, sx, sy, ox, oy, kx, ky)
 	end
 	return id
@@ -60,10 +60,13 @@ end
 -- after at least one released sprite is present, next call of Add will use previously
 -- released id and return it on call
 function VASpriteBatch:releaseSprite(id)
-	-- set all vertices XYUV 0/0/0/0
-	local vind = (id-1)*4
-	for i=1,4 do
-		self:setVertex(vind+i, 0,0, 0,0, 255,255,255,255)
+	self.sb:set(id,0,0,0,0,0)
+	if self.use_mesh == true then
+		-- set all vertices XYUV 0/0/0/0
+		local vind = (id-1)*4
+		for i=1,4 do
+			self:setVertex(vind+i, 0,0, 0,0, 255,255,255,255)
+		end
 	end
 	self.released_stack[#self.released_stack+1] = id
 end
@@ -158,18 +161,21 @@ function VASpriteBatch:swapSpriteGeometry(id1,id2)
 end
 
 function VASpriteBatch:setSpriteColor(id,r,g,b,a)
-	local vi = (id-1)*4
-	
-	if type(r) == "table" then -- i use comparison first because if i use comparison in the loop, string comparison is a bit slower
-		for i=1,4 do
-			local v_x,v_y,v_u,v_v,v_r,v_g,v_b,v_a = self:getVertex(vi+i)
-			self:setVertex(vi+i,v_x,v_y,v_u,v_v,(r[1] or v_r),(r[2] or v_g),(r[3] or v_b),(r[4] or v_a))
+	if self.use_mesh == true then
+		local vi = (id-1)*4
+		if type(r) == "table" then -- i use comparison first because if i use comparison in the loop, string comparison is a bit slower
+			for i=1,4 do
+				local v_x,v_y,v_u,v_v,v_r,v_g,v_b,v_a = self:getVertex(vi+i)
+				self:setVertex(vi+i,v_x,v_y,v_u,v_v,(r[1] or v_r),(r[2] or v_g),(r[3] or v_b),(r[4] or v_a))
+			end
+		else
+			for i=1,4 do
+				local v_x,v_y,v_u,v_v,v_r,v_g,v_b,v_a = self:getVertex(vi+i)
+				self:setVertex(vi+i,v_x,v_y,v_u,v_v,(r or v_r),(g or v_g),(b or v_b),(a or v_a))
+			end
 		end
 	else
-		for i=1,4 do
-			local v_x,v_y,v_u,v_v,v_r,v_g,v_b,v_a = self:getVertex(vi+i)
-			self:setVertex(vi+i,v_x,v_y,v_u,v_v,(r or v_r),(g or v_g),(b or v_b),(a or v_a))
-		end
+		self:setColor(r,g,b,a)
 	end
 end
 
@@ -178,7 +184,7 @@ end
 -- i use lazy autorefresh of each mesh attribute before that drawcall, 
 -- not after attribute has been modified
 function VASpriteBatch:getSpriteBatch() 
-	if self.use_autorefresh == true then
+	if self.use_autorefresh == true and self.use_mesh == true then
 		self:refreshAttributes()
 	end
 	return self.sb 
@@ -201,6 +207,6 @@ function VASpriteBatch:getMesh() return self.mesh end
 function VASpriteBatch:getVertex(index) return self.mesh:getVertex(index) end
 function VASpriteBatch:setVertex(index,x,y,u,v,r,g,b,a)	self.mesh:setVertex(index,x,y,u,v,r,g,b,a) end
 function VASpriteBatch:getFreeSpriteCount() return #self.released_stack end
-function VASpriteBatch:setColor(r,g,b,a) self.sb:setColor(r,g,b,a) end
-function VASpriteBatch:setMeshUsage(mu) self.use_mesh = mu end
+function VASpriteBatch:setColor(r,g,b,a) self.sb:setColor(r or 255,g or 255,b or 255,a or 255) end
 function VASpriteBatch:setAutorefresh(ar) self.use_autorefresh = ar end
+function VASpriteBatch:getColor() return self.sb:getColor() end
