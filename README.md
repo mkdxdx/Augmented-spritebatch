@@ -9,3 +9,5 @@ Also has sprite release function so if sprite is not needed anymore, it's id is 
 More in example file and among code comments.
 
 PS: It doesn't track kx/ky shear variables if mesh mode is used. I don't use this feature in my projects so i didn't bother to learn math of how to do it. Feel free to suggest or fork the thing if you are interested.
+
+PPS: On each sprite add, especially in mesh mode there should be a quad passed as function argument for UV calculation. Just create basic quad with texture dimensions and you're good to go. Quads are love, quads are life.
