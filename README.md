@@ -6,6 +6,6 @@ Also can track vertices of it's own mesh so user doesn't have to create separate
 
 Also has sprite release function so if sprite is not needed anymore, it's id is now free and will be returned on next sprite add operation. Because expanding buffer size with mesh recreation is too much of a bottleneck.
 
-More in example and in code comments.
+More in example file and among code comments.
 
-PS in mesh mode it will not track shear kx/ky variable since i don't use this feature at all and didn't dig on math of how to implement this for vertex coordinates calculations. Feel free to suggest or fork the thing if you are interested.
+PS: It doesn't track kx/ky shear variables if mesh mode is used. I don't use this feature in my projects so i didn't bother to learn math of how to do it. Feel free to suggest or fork the thing if you are interested.
